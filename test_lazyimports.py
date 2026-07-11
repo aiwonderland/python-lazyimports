@@ -1,3 +1,7 @@
+# Author: Evan Yang (aiwonderland) 2026
+# License: MIT
+# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
+
 """Unit tests for the ``lazyimports`` package.
 
 Run with::
