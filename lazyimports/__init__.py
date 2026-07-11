@@ -1,3 +1,7 @@
+# Author: Evan Yang (aiwonderland) 2026
+# License: MIT
+# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
+
 """lazyimports — A module that backports Python 3.15's lazy import.
 
 This package provides a backport of the ``lazy import`` statement
@@ -38,7 +42,7 @@ from lazyimports.core import (
 )
 
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 
 __all__ = [
     "__version__",

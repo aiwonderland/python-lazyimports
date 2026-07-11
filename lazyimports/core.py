@@ -1,3 +1,7 @@
+# Author: Evan Yang (aiwonderland) 2026
+# License: MIT
+# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
+
 """The core api of `lazyimports` module.
 
 This module provides a backport of Python 3.15's `lazy import`
