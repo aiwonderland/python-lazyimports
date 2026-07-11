@@ -111,6 +111,13 @@ numpy = lazy_import("numpy")
 python -m unittest test_lazyimports -v
 ```
 
+## Retired
+
+This project will reach its end-of-life around October 1, 2031 — the official EOL date of Python 3.15 — and the exact timeline could be slightly delayed.
+We plan to ship the final stable release in November 2031. After this release, all support will **cease** and the repository will be **officially archived**,
+as this library is developed solely to bring lazy import compatibility to Python 3.15 and older versions.
+
+
 ## License
 
 MIT
