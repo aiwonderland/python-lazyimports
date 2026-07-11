@@ -1,0 +1,12 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "python-lazyimports"
+version = "0.1.0"
+description = "Backport of Python 3.15's lazy import statement."
+requires-python = ">=3.6"
+
+[tool.hatch.build.targets.wheel]
+packages = ["lazyimports"]
