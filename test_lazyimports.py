@@ -2,11 +2,11 @@
 
 Run with::
 
-    python -m unittest test_laztimports -v
+    python -m unittest test_lazyimports -v
 
 or directly::
 
-    python test_laztimports.py
+    python test_lazyimports.py
 """
 
 import math
