@@ -39,6 +39,34 @@ class TestVersionInfo(unittest.TestCase):
     def test_version_is_string(self):
         self.assertIsInstance(lazyimports.__version__, str)
 
+    def test_status_format(self):
+        # ``__status__`` must follow the documented
+        # ``"<development>;<maintenance>;<eol-iso-date>"`` format so
+        # tooling can parse it reliably.
+        self.assertIsInstance(lazyimports.__status__, str)
+        parts = lazyimports.__status__.split(";")
+        self.assertEqual(
+            len(parts), 3,
+            "__status__ must have exactly three ;-separated parts, got {!r}".format(
+                lazyimports.__status__
+            ),
+        )
+        development, maintenance, eol = parts
+        self.assertIn(
+            development,
+            {"alpha", "beta", "stable", "mature", "inactive"},
+        )
+        self.assertIn(
+            maintenance,
+            {"active", "maintenance", "security-only", "retired"},
+        )
+        # ISO-8601 date: YYYY-MM-DD.
+        self.assertRegex(eol, r"^\d{4}-\d{2}-\d{2}$")
+        # The EOL date must be after today — the project is still alive.
+        import datetime
+        eol_date = datetime.date.fromisoformat(eol)
+        self.assertGreater(eol_date, datetime.date.today())
+
     def test_native_lazy_import_flag(self):
         # Must be a boolean derived from the interpreter version.
         self.assertIsInstance(NATIVE_LAZY_IMPORT, bool)

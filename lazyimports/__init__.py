@@ -46,8 +46,29 @@ from lazyimports.core import (
 
 __version__ = "0.1.2"
 
+# Lifecycle status marker for this package.
+#
+# Rationale for using a plain string: it offers maximum portability with zero extra dependencies,
+# allowing users and automation tooling to inspect the project lifecycle state at runtime
+# without relying on importlib.metadata, network requests, or platform-specific logic.
+# While a structured dictionary would support richer metadata, it would lock the project into
+# a rigid schema that becomes difficult to extend and revise later.
+#
+# String format: ``"<development-phase>;<maintenance-tier>;<eol-iso-date>"``
+#   - ``development-phase`` follows PyPI's standard Development Status classifiers
+#     (examples: "beta", "stable", "inactive"). Aligning with this shared vocabulary
+#     ensures the value remains parsable by automated tooling.
+#   - ``maintenance-tier`` accepts exactly four fixed values: "active", "maintenance",
+#     "security-only", "retired". Scripts and tools may use this field for direct conditional logic.
+#   - ``eol-iso-date`` denotes the scheduled end-of-life date in ISO‑8601 (YYYY‑MM‑DD).
+#     This timeline is derived from the official EOL schedule of Python 3.15 (October 2031).
+#     It is subject to revision if the upstream Python release timeline shifts.
+__status__ = "beta;active;2031-10-31"
+
+
 __all__ = [
     "__version__",
+    "__status__",
     "NATIVE_LAZY_IMPORT",
     "SUPPORT_LAZY_IMPORT",
     "LazyModule",
