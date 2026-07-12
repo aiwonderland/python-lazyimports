@@ -10,6 +10,12 @@ syntax may be used directly; this module's API works identically on
 all supported Python versions (3.x through 3.15).
 """
 
+# Use python 3.15's new feature :)
+__lazy_modules__ = [
+    "sys",
+    "contextlib",
+]
+
 import contextlib
 import importlib
 import sys

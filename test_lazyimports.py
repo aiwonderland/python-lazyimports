@@ -13,6 +13,11 @@ or directly::
     python test_lazyimports.py
 """
 
+# A feature again :)
+__lazy_modules__ = [
+    "types",
+]
+
 import math
 import os
 import sys
