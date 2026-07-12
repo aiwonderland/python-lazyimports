@@ -28,6 +28,8 @@ On Python 3.15+ you may also use the native syntax directly::
     lazy from os.path import join
 
 This package's API works identically across all supported versions.
+
+Or more information, see <https://github.com/aiwonderland/python-lazyimports/blob/main/docs/documentation.md>
 """
 
 from lazyimports.core import (
