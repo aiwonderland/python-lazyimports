@@ -45,6 +45,7 @@ from lazyimports.core import (
 
 
 __version__ = "0.1.3"
+__license__ = "MIT"
 
 # Lifecycle status marker for this package.
 #
@@ -68,6 +69,7 @@ __status__ = "beta;active;2031-10-31"
 
 __all__ = [
     "__version__",
+    "__license__",
     "__status__",
     "NATIVE_LAZY_IMPORT",
     "SUPPORT_LAZY_IMPORT",
