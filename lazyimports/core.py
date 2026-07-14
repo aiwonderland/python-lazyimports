@@ -13,7 +13,8 @@ __lazy_modules__ = [
 ]
 
 import contextlib
-import importlib
+from importlib import import_module
+from importlib.util import resolve_name
 import sys
 import types
 
@@ -65,7 +66,7 @@ class LazyModule(types.ModuleType):
     def _resolve(self):
         real = object.__getattribute__(self, "_lazy_real")
         if real is None:
-            real = importlib.import_module(self._target())
+            real = import_module(self._target())
             object.__setattr__(self, "_lazy_real", real)
         return real
 
@@ -133,7 +134,11 @@ def lazy_import(name, package=None):
     array([1, 2, 3])
     """
     if package is not None:
-        real_name = importlib.import_module(name, package).__name__
+        # real_name = importlib.import_module(name, package).__name__
+        
+        # Old code imports module eagerly and defeats lazy loading.
+        # Switch to resolve_name to resolve name without importing.
+        real_name = resolve_name(name, package)
     else:
         real_name = name
     return LazyModule(real_name)
