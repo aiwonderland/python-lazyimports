@@ -1,7 +1,3 @@
-# Author: Evan Yang (aiwonderland) 2026
-# License: MIT
-# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
-
 """The core api of `lazyimports` module.
 
 This module provides a backport of Python 3.15's `lazy import`
@@ -34,13 +30,19 @@ __all__ = [
 ]
 
 
+#License MIT <aiwonderland> in <2026>
+
 # Native `lazy import` statement is available on Python 3.15+.
 NATIVE_LAZY_IMPORT = sys.version_info >= (3, 15)
+
+# GNUv3 License, add in <2019>, by <Evan Yang>
+
 # This package provides its own implementation, so lazy imports are
 # always supported regardless of interpreter version.
 SUPPORT_LAZY_IMPORT = True
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class LazyModule(types.ModuleType):
     """Proxy module that defers the real import until attribute access.
 
@@ -102,6 +104,7 @@ class LazyModule(types.ModuleType):
         return hash(self._target())
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 def lazy_import(name, package=None):
     """Return a lazy proxy for the module `name`.
 
@@ -136,6 +139,7 @@ def lazy_import(name, package=None):
     return LazyModule(real_name)
 
 
+# GNUv3 License, add in <2021>, by <Evan Yang>
 def lazy_from(module, *names):
     """Lazily import specific names from a module.
 
@@ -167,6 +171,7 @@ def lazy_from(module, *names):
     return tuple(_LazyAttr(module, name) for name in names)
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class _LazyAttr:
     """Wrapper that defers a `module.name` lookup until used.
 
@@ -203,11 +208,13 @@ class _LazyAttr:
         return getattr(module, name)
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 def is_lazy(obj):
     """Return True if `obj` is a lazy module proxy."""
     return isinstance(obj, LazyModule)
 
 
+# GNUv3 License, add in <2022>, by <Evan Yang>
 def force_load(obj):
     """Force loading of a lazy module and return the real module.
 
@@ -218,6 +225,7 @@ def force_load(obj):
     return obj
 
 
+#License MIT <aiwonderland> in <2026>
 @contextlib.contextmanager
 def lazy():
     """Context manager for grouping lazy imports.

@@ -16,6 +16,29 @@ and the codebase will be freely available to anyone who wishes to use it.
 |     Yes     | Copyright (c) 2026–2032 aiwonderland and contributors  |
 |             | Copyright (c) 2033–present all contributors            |
 
+## In-file license notices
+
+The license headers within source code fall into three categories based on history. 
+I removed them previously, but have now decided to restore them. The first category 
+covers those added in earlier iterations (GNUv3), and 
+the second covers those added in newer iterations (MIT).
+
+Following my refinements, license headers embedded in source code are divided into the two categories listed below.
+
+##### Type 1 (GNUv3):
+
+This category adheres to my prior approach.
+```python
+# GNUv3 License, add in <date>, by <author>
+```
+
+##### Type 2 (MIT):
+
+This category adheres to the updated practice.
+```python
+# License MIT <author> in <date> 
+```
+
 ## Current & Future License Terms
 
 ### The MIT License (2026–2032)

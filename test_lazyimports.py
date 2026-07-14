@@ -1,7 +1,3 @@
-# Author: Evan Yang (aiwonderland) 2026
-# License: MIT
-# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
-
 """Unit tests for the ``lazyimports`` package.
 
 Run with::
@@ -38,6 +34,7 @@ from lazyimports.core import (
 )
 
 
+#License MIT <aiwonderland> in <2026>
 class TestVersionInfo(unittest.TestCase):
     """Tests for module-level version metadata."""
 
@@ -92,6 +89,7 @@ class TestVersionInfo(unittest.TestCase):
                 )
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class TestLazyImport(unittest.TestCase):
     """Tests for ``lazy_import``."""
 
@@ -149,6 +147,7 @@ class TestLazyImport(unittest.TestCase):
         self.assertIs(real, core)
 
 
+# GNUv3 License, add in <2021>, by <Evan Yang>
 class TestLazyFrom(unittest.TestCase):
     """Tests for ``lazy_from``."""
 
@@ -186,6 +185,7 @@ class TestLazyFrom(unittest.TestCase):
         self.assertEqual(result[0]("x", "y"), os.path.join("x", "y"))
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class TestIsLazy(unittest.TestCase):
     """Tests for ``is_lazy``."""
 
@@ -201,6 +201,7 @@ class TestIsLazy(unittest.TestCase):
                 self.assertFalse(is_lazy(value))
 
 
+# GNUv3 License, add in <2022>, by <Evan Yang>
 class TestForceLoad(unittest.TestCase):
     """Tests for ``force_load``."""
 
@@ -229,6 +230,7 @@ class TestForceLoad(unittest.TestCase):
         self.assertIs(first, second)
 
 
+#License MIT <aiwonderland> in <2026>
 class TestLazyContextManager(unittest.TestCase):
     """Tests for the ``lazy()`` context manager."""
 
@@ -253,6 +255,7 @@ class TestLazyContextManager(unittest.TestCase):
                 raise Boom
 
 
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class TestLazyModuleDunderMethods(unittest.TestCase):
     """Tests for dunder methods on ``LazyModule``."""
 
@@ -312,6 +315,8 @@ class TestLazyModuleDunderMethods(unittest.TestCase):
         self.assertIn("path", names)
 
 
+
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class TestLazyModuleRejectsInternalAttrs(unittest.TestCase):
     """``_lazy_*`` attributes must never recurse via ``__getattr__``."""
 
@@ -321,6 +326,8 @@ class TestLazyModuleRejectsInternalAttrs(unittest.TestCase):
             _ = proxy._lazy_does_not_exist
 
 
+
+# GNUv3 License, add in <2018>, by <Evan Yang>
 class TestIntegration(unittest.TestCase):
     """End-to-end style tests combining several APIs."""
 

@@ -1,6 +1,4 @@
-# Author: Evan Yang (aiwonderland) 2026
-# License: MIT
-# Copyright (c) 2026–2032 Evan Yang (aiwonderland)
+# GNUv3 License, add in <2018>, by <Evan Yang>
 
 """lazyimports — A module that backports Python 3.15's lazy import.
 
@@ -44,7 +42,9 @@ from lazyimports.core import (
 )
 
 
+# License MIT <aiwonderland> in <2026> 
 __version__ = "0.1.3"
+# License MIT <aiwonderland> in <2026> 
 __license__ = "MIT"
 
 # Lifecycle status marker for this package.
@@ -64,6 +64,8 @@ __license__ = "MIT"
 #   - ``eol-iso-date`` denotes the scheduled end-of-life date in ISO‑8601 (YYYY‑MM‑DD).
 #     This timeline is derived from the official EOL schedule of Python 3.15 (October 2031).
 #     It is subject to revision if the upstream Python release timeline shifts.
+
+# License MIT <aiwonderland> in <2026> 
 __status__ = "beta;active;2031-10-31"
 
 
