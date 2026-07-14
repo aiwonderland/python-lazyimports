@@ -201,7 +201,7 @@ You should rarely need to instantiate `LazyModule` directly — use
 
 | Name | Type | Value |
 | --- | --- | --- |
-| `__version__` | `str` | Package version (currently `"0.1.1"`). |
+| `__version__` | `str` | Package version. |
 | `NATIVE_LAZY_IMPORT` | `bool` | `True` if the interpreter provides the native `lazy import` syntax (Python 3.15+). |
 | `SUPPORT_LAZY_IMPORT` | `bool` | Always `True` — this package provides its own implementation. |
 
