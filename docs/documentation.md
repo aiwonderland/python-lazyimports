@@ -202,6 +202,8 @@ You should rarely need to instantiate `LazyModule` directly — use
 | Name | Type | Value |
 | --- | --- | --- |
 | `__version__` | `str` | Package version. |
+| `__license__` | `str` | License type. |
+| `__status__` | `str` | Lifecycle status marker for this package. See comments in `lazyimports/__init__.py` |
 | `NATIVE_LAZY_IMPORT` | `bool` | `True` if the interpreter provides the native `lazy import` syntax (Python 3.15+). |
 | `SUPPORT_LAZY_IMPORT` | `bool` | Always `True` — this package provides its own implementation. |
 
@@ -392,8 +394,8 @@ The following are part of the **public API** and will not change
 without a deprecation cycle:
 
 - `lazy_import`, `lazy_from`, `is_lazy`, `force_load`, `lazy`,
-  `LazyModule`, `__version__`, `NATIVE_LAZY_IMPORT`,
-  `SUPPORT_LAZY_IMPORT`.
+  `LazyModule`, `__version__`, `__license__`, `__status__`, 
+  `NATIVE_LAZY_IMPORT`, `SUPPORT_LAZY_IMPORT`.
 
 Anything prefixed with `_` (e.g. `_LazyAttr`, `_target`,
 `_resolve`) is internal and may change in any release.
