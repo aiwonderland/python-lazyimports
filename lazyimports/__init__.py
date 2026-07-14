@@ -43,7 +43,7 @@ from lazyimports.core import (
 
 
 # License MIT <aiwonderland> in <2026> 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 # License MIT <aiwonderland> in <2026> 
 __license__ = "MIT"
 
