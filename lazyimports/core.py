@@ -22,6 +22,7 @@ import types
 __all__ = [
     "NATIVE_LAZY_IMPORT",
     "SUPPORT_LAZY_IMPORT",
+    "SETATTR_TARGET",
     "LazyModule",
     "lazy_import",
     "lazy_from",
@@ -31,7 +32,7 @@ __all__ = [
 ]
 
 
-#License MIT <aiwonderland> in <2026>
+# License MIT <aiwonderland> in <2026>
 
 # Native `lazy import` statement is available on Python 3.15+.
 NATIVE_LAZY_IMPORT = sys.version_info >= (3, 15)
@@ -42,6 +43,35 @@ NATIVE_LAZY_IMPORT = sys.version_info >= (3, 15)
 # always supported regardless of interpreter version.
 SUPPORT_LAZY_IMPORT = True
 
+# License MIT <aiwonderland> in <2026>
+
+# ---------------------------------------------------------------------------
+# Module-level configuration
+# ---------------------------------------------------------------------------
+
+# Controls where ``LazyModule.__setattr__`` writes non-internal
+# attributes when the real module has not yet been loaded (or when
+# loading has failed).
+#
+# Accepted values:
+#   * ``"module"`` (default, backward-compatible): the attribute is
+#     forwarded to the underlying module via ``setattr(real, ...)``.
+#     This means a value written through the proxy becomes visible
+#     globally (because Python modules are singletons in
+#     ``sys.modules``). This matches the behaviour of ordinary
+#     ``import foo`` followed by ``foo.bar = ...``.
+#   * ``"proxy"``: the attribute is mounted on the proxy shell via
+#     ``object.__setattr__(self, ...)``. The underlying module is
+#     **not** loaded as a side effect, and the value is visible only
+#     through this proxy instance. Use this when you want to attach
+#     scratch state to a lazy module without paying for the import
+#     or polluting the real module's namespace.
+#
+# Why a global instead of a per-instance flag? The two modes are
+# not usually mixed in the same project; a single global keeps the
+# API surface small. Change at your own risk and reset it before any
+# code that expects the default behaviour runs.
+SETATTR_TARGET = "module"
 
 # GNUv3 License, add in <2018>, by <Evan Yang>
 class LazyModule(types.ModuleType):
@@ -51,62 +81,173 @@ class LazyModule(types.ModuleType):
     instantiated directly. The proxy behaves like the underlying
     module, but the real module is not imported until an attribute is
     actually requested. Once loaded, the real module is cached.
+
+    Failure handling
+    ----------------
+    If the first import attempt raises ``ImportError`` (typically
+    because the module does not exist), the exception is **cached**
+    on the proxy and re-raised on every subsequent attribute access
+    — the import system is not asked again. This prevents a missing
+    optional dependency from being retried on every attribute access
+    in a hot loop. Use :func:`force_load` if you need to retry after
+    installing the dependency.
+
+    Magic methods
+    -------------
+    Python looks up operator dunders (``__eq__``, ``__lt__``,
+    ``__hash__``, ``__bool__``, ``__repr__``, etc.) on the **type**,
+    not the instance, so they never go through ``__getattr__`` and
+    therefore never trigger the lazy import. The handful we define
+    (``__hash__``, ``__bool__``, ``__eq__``, ``__ne__``, ``__repr__``)
+    are based purely on the target module name, which is known at
+    proxy-construction time. As a consequence:
+
+      * Two proxies for the same module compare equal
+        (``a == b`` when ``a._target() == b._target()``).
+      * Hashing is consistent with equality.
+      * A proxy is always truthy (``bool(proxy) is True``).
+
+    Other operators (``<``, ``<=``, ``+``, …) fall back to
+    ``object``'s default identity-based behaviour; if you need
+    ordering, compare the target names explicitly.
+
+    ``__dir__``
+    -----------
+    Before the proxy is loaded, ``dir(proxy)`` returns the slot names
+    plus ``types.ModuleType``'s attributes. If the target module is
+    already present in ``sys.modules`` (because something else
+    imported it first), the contents of that module's ``__all__``
+    are merged in so REPL / IDE completion sees the real exports.
     """
 
-    __slots__ = ("_lazy_target", "_lazy_real")
+    __slots__ = ("_lazy_target", "_lazy_real", "_lazy_error")
 
     def __init__(self, name):
         super().__init__(name)
+        # Use ``object.__setattr__`` because we override ``__setattr__``
+        # to forward writes to the real module once it has been loaded.
         object.__setattr__(self, "_lazy_target", name)
         object.__setattr__(self, "_lazy_real", None)
+        # Cached ``ImportError`` from a failed first-resolve attempt.
+        # ``None`` means "no failure recorded yet". The presence of a
+        # truthy value short-circuits future ``_resolve()`` calls and
+        # prevents repeated import attempts.
+        object.__setattr__(self, "_lazy_error", None)
 
     def _target(self):
+        # Return the fully-qualified module name stored at construction.
+        # Defined as a method (not a property) so it does not collide
+        # with ``__getattr__``-driven attribute forwarding.
         return object.__getattribute__(self, "_lazy_target")
 
     def _resolve(self):
+        # Two-state cache: either the real module is loaded, or we
+        # have a cached exception to re-raise. Anything else means
+        # this is the first call and we attempt the import.
         real = object.__getattribute__(self, "_lazy_real")
-        if real is None:
+        if real is not None:
+            return real
+        error = object.__getattribute__(self, "_lazy_error")
+        if error is not None:
+            raise error
+        try:
             real = import_module(self._target())
-            object.__setattr__(self, "_lazy_real", real)
+        except ImportError as exc:
+            # Cache the exception so we don't retry. The original
+            # traceback is preserved on the cached exception object.
+            object.__setattr__(self, "_lazy_error", exc)
+            raise
+        object.__setattr__(self, "_lazy_real", real)
         return real
 
     def __getattr__(self, name):
+        # ``_lazy_*`` attributes are managed via ``object.__setattr__``;
+        # asking for one on a not-yet-loaded module would otherwise
+        # recurse here, so guard explicitly.
         if name.startswith("_lazy_"):
             raise AttributeError(name)
         return getattr(self._resolve(), name)
 
     def __setattr__(self, name, value):
+        # Internal ``_lazy_*`` slots always live on the proxy shell.
         if name.startswith("_lazy_"):
             object.__setattr__(self, name, value)
             return
+        # Behaviour is controlled by the module-level ``SETATTR_TARGET``
+        # flag. See the flag's docstring for the rationale.
+        if SETATTR_TARGET == "proxy":
+            object.__setattr__(self, name, value)
+            return
+        # Default: forward to the underlying module. This both loads
+        # the module (if it has not been loaded yet) and makes the
+        # attribute visible through every reference to that module.
         setattr(self._resolve(), name, value)
 
     def __delattr__(self, name):
         if name.startswith("_lazy_"):
             object.__delattr__(self, name)
             return
+        # Deleting an attribute on a proxy implies the real module
+        # is intended to be touched — we never silently unmount
+        # shell-only state because there is none in the default mode.
         delattr(self._resolve(), name)
 
     def __dir__(self):
         if object.__getattribute__(self, "_lazy_real") is None:
-            # return sorted(set(self.__slots__) | set(dir(types.ModuleType)))
-            # Try to support python 3.6, forgot this :(
+            # Module hasn't been loaded yet by us. Show a static
+            # baseline so introspection tools do not raise.
             attrs = set(dir(types.ModuleType))
             attrs.update(self.__slots__)
+            # If the target module was already imported by some other
+            # code path, surface its ``__all__`` so REPL completion
+            # and IDEs see the real exports even before we touch it.
+            target = self._target()
+            already_loaded = sys.modules.get(target)
+            if already_loaded is not None:
+                all_attr = getattr(already_loaded, "__all__", None)
+                if all_attr:
+                    attrs.update(all_attr)
             return sorted(attrs)
         return dir(self._resolve())
 
     def __repr__(self):
         real = object.__getattribute__(self, "_lazy_real")
         if real is None:
+            error = object.__getattribute__(self, "_lazy_error")
+            if error is not None:
+                return "<lazy module {!r} [failed: {}]>".format(
+                    self._target(), error
+                )
             return "<lazy module {!r} [not loaded]>".format(self._target())
         return repr(real)
 
     def __bool__(self):
+        # A lazy proxy is always truthy, even before its target loads.
+        # Modules are typically used for their side effects / attributes,
+        # so truthiness should not depend on the load state.
         return True
 
     def __hash__(self):
+        # Hash by target name so equal proxies hash equally and can
+        # be used interchangeably as dict keys. Defined as a dunder
+        # (rather than via ``__getattr__``) so it works before the
+        # underlying module is loaded.
         return hash(self._target())
+
+    def __eq__(self, other):
+        # Two proxies are equal when their targets match. Defined as
+        # a dunder so it does not trigger a lazy import — useful in
+        # tests and debugging where you want to compare proxy
+        # identity without paying the import cost.
+        if isinstance(other, LazyModule):
+            return self._target() == other._target()
+        return NotImplemented
+
+    def __ne__(self, other):
+        result = self.__eq__(other)
+        if result is NotImplemented:
+            return result
+        return not result
 
 
 # GNUv3 License, add in <2018>, by <Evan Yang>
@@ -139,7 +280,7 @@ def lazy_import(name, package=None):
     """
     if package is not None:
         # real_name = importlib.import_module(name, package).__name__
-        
+
         # Old code imports module eagerly and defeats lazy loading.
         # Switch to resolve_name to resolve name without importing.
         real_name = resolve_name(name, package)
@@ -164,7 +305,7 @@ def lazy_from(module, *names):
     -------
     LazyModule or tuple
         If `names` is empty, returns the module proxy. Otherwise
-        returns a tuple of `LazyAttr` wrappers; each wrapper triggers
+        returns a tuple of `_LazyAttr` wrappers; each wrapper triggers
         the underlying import on first access.
 
     Examples
