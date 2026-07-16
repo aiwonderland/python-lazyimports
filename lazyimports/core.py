@@ -89,7 +89,11 @@ class LazyModule(types.ModuleType):
 
     def __dir__(self):
         if object.__getattribute__(self, "_lazy_real") is None:
-            return sorted(set(self.__slots__) | set(dir(types.ModuleType)))
+            # return sorted(set(self.__slots__) | set(dir(types.ModuleType)))
+            # Try to support python 3.6, forgot this :(
+            attrs = set(dir(types.ModuleType))
+            attrs.update(self.__slots__)
+            return sorted(attrs)
         return dir(self._resolve())
 
     def __repr__(self):
