@@ -33,6 +33,7 @@ Or more information, see <https://github.com/aiwonderland/python-lazyimports/blo
 from lazyimports.core import (
     NATIVE_LAZY_IMPORT,
     SUPPORT_LAZY_IMPORT,
+    SETATTR_TARGET,
     LazyModule,
     lazy_import,
     lazy_from,
@@ -75,6 +76,7 @@ __all__ = [
     "__status__",
     "NATIVE_LAZY_IMPORT",
     "SUPPORT_LAZY_IMPORT",
+    "SETATTR_TARGET",
     "LazyModule",
     "lazy_import",
     "lazy_from",

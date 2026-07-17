@@ -49,29 +49,31 @@ SUPPORT_LAZY_IMPORT = True
 # Module-level configuration
 # ---------------------------------------------------------------------------
 
-# Controls where ``LazyModule.__setattr__`` writes non-internal
-# attributes when the real module has not yet been loaded (or when
-# loading has failed).
-#
-# Accepted values:
-#   * ``"module"`` (default, backward-compatible): the attribute is
-#     forwarded to the underlying module via ``setattr(real, ...)``.
-#     This means a value written through the proxy becomes visible
-#     globally (because Python modules are singletons in
-#     ``sys.modules``). This matches the behaviour of ordinary
-#     ``import foo`` followed by ``foo.bar = ...``.
-#   * ``"proxy"``: the attribute is mounted on the proxy shell via
-#     ``object.__setattr__(self, ...)``. The underlying module is
-#     **not** loaded as a side effect, and the value is visible only
-#     through this proxy instance. Use this when you want to attach
-#     scratch state to a lazy module without paying for the import
-#     or polluting the real module's namespace.
-#
-# Why a global instead of a per-instance flag? The two modes are
-# not usually mixed in the same project; a single global keeps the
-# API surface small. Change at your own risk and reset it before any
-# code that expects the default behaviour runs.
+
 SETATTR_TARGET = "module"
+"""
+Controls where ``LazyModule.__setattr__`` writes non-internal
+attributes when the real module has not yet been loaded (or when
+loading has failed).
+
+Accepted values:
+  * ``"module"`` (default, backward-compatible): the attribute is
+    forwarded to the underlying module via ``setattr(real, ...)``.
+    This means a value written through the proxy becomes visible
+    globally (because Python modules are singletons in
+    ``sys.modules``). This matches the behaviour of ordinary
+    ``import foo`` followed by ``foo.bar = ...``.
+  * ``"proxy"``: the attribute is mounted on the proxy shell via
+    ``object.__setattr__(self, ...)``. The underlying module is
+    **not** loaded as a side effect, and the value is visible only
+    through this proxy instance. Use this when you want to attach
+    scratch state to a lazy module without paying for the import
+    or polluting the real module's namespace.
+
+Why a global instead of a per-instance flag? The two modes are
+not usually mixed in the same project; a single global keeps the
+API surface small. Change at your own risk and reset it before any
+code that expects the default behaviour runs."""
 
 # GNUv3 License, add in <2018>, by <Evan Yang>
 class LazyModule(types.ModuleType):

@@ -206,6 +206,7 @@ You should rarely need to instantiate `LazyModule` directly — use
 | `__status__` | `str` | Lifecycle status marker for this package. See comments in `lazyimports/__init__.py` |
 | `NATIVE_LAZY_IMPORT` | `bool` | `True` if the interpreter provides the native `lazy import` syntax (Python 3.15+). |
 | `SUPPORT_LAZY_IMPORT` | `bool` | Always `True` — this package provides its own implementation. |
+| `SETATTR_TARGET` | `Literal["module", "proxy"]` | Controls where ``LazyModule.__setattr__`` writes non-internal attributes when the real module has not yet been loaded (or when loading has failed). |
 
 ---
 
