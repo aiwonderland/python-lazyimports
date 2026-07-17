@@ -32,6 +32,10 @@ __all__ = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Module-level configuration
+# ---------------------------------------------------------------------------
+
 # License MIT <aiwonderland> in <2026>
 
 # Native `lazy import` statement is available on Python 3.15+.
@@ -45,11 +49,9 @@ SUPPORT_LAZY_IMPORT = True
 
 # License MIT <aiwonderland> in <2026>
 
-# ---------------------------------------------------------------------------
-# Module-level configuration
-# ---------------------------------------------------------------------------
-
-
+# WARNING: When LAZY_SETATTR_TARGET = "proxy", attributes stored on the proxy
+# shadow identically named attributes from the real module once loaded.
+# Use "proxy" only for temporary proxy-local metadata.
 SETATTR_TARGET = "module"
 """
 Controls where ``LazyModule.__setattr__`` writes non-internal
