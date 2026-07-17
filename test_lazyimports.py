@@ -25,6 +25,7 @@ from lazyimports import core
 from lazyimports.core import (
     NATIVE_LAZY_IMPORT,
     SUPPORT_LAZY_IMPORT,
+    SETATTR_TARGET,
     LazyModule,
     force_load,
     is_lazy,
@@ -354,6 +355,275 @@ class TestIntegration(unittest.TestCase):
         _ = b.curdir
         self.assertIsNotNone(a._lazy_real)
         self.assertIsNotNone(b._lazy_real)
+
+
+# License MIT <aiwonderland> in <2026>
+class TestSetattrTarget(unittest.TestCase):
+    """Tests for the ``SETATTR_TARGET`` mode switch.
+
+    ``SETATTR_TARGET`` controls whether ``LazyModule.__setattr__``
+    forwards attribute writes to the underlying module (``"module"``,
+    the default) or mounts them on the proxy shell only
+    (``"proxy"``).
+    """
+
+    # Helper used by the mode tests. Save and restore the global so
+    # a failure in one test cannot leak into another.
+    def setUp(self):
+        self._previous_mode = SETATTR_TARGET
+
+    def tearDown(self):
+        # Reset to the default for every test that runs afterwards.
+        lazyimports.core.SETATTR_TARGET = self._previous_mode
+        # In case the default ever changes, fall back to "module".
+        if lazyimports.core.SETATTR_TARGET not in ("module", "proxy"):
+            lazyimports.core.SETATTR_TARGET = "module"
+
+    def test_default_is_module(self):
+        # The package default must be the backward-compatible mode.
+        self.assertEqual(SETATTR_TARGET, "module")
+
+    def test_module_mode_forwards_to_underlying_module(self):
+        lazyimports.core.SETATTR_TARGET = "module"
+        proxy = lazy_import("math")
+        sentinel_name = "_setattr_target_module_test_attr"
+        try:
+            proxy.SCRATCH_ATTR = "via-proxy"
+            # The attribute must be visible on the real module too
+            # (because the write was forwarded).
+            self.assertEqual(math.SCRATCH_ATTR, "via-proxy")
+        finally:
+            if hasattr(math, sentinel_name):
+                delattr(math, sentinel_name)
+
+    def test_proxy_mode_does_not_load_module(self):
+        lazyimports.core.SETATTR_TARGET = "proxy"
+        # Use a sentinel module name guaranteed not to exist; the
+        # ``"proxy"`` mode must not even attempt to import it.
+        sentinel = "_lazyimports_setattr_proxy_sentinel_xyz"
+        proxy = lazy_import(sentinel)
+        # No exception yet because we have not touched the module.
+        proxy.SCRATCH_ATTR = "scratch"
+        # The proxy shell must carry the value.
+        self.assertEqual(proxy.SCRATCH_ATTR, "scratch")
+        # And the underlying import must NOT have been triggered.
+        self.assertIsNone(proxy._lazy_real)
+        self.assertIsNone(proxy._lazy_error)
+        # Sanity: touching a real attribute now should still raise.
+        with self.assertRaises(ImportError):
+            _ = proxy.any_real_attribute  # noqa: B018
+
+    def test_proxy_mode_is_per_instance(self):
+        # Two proxies in proxy mode must not see each other's state
+        # because the writes are local to the shell.
+        lazyimports.core.SETATTR_TARGET = "proxy"
+        sentinel = "_lazyimports_setattr_proxy_isolation_xyz"
+        a = lazy_import(sentinel)
+        b = lazy_import(sentinel)
+        a.ONLY_ON_A = 1
+        # Check ``b``'s instance dict directly so we don't trigger
+        # ``__getattr__`` (which would try to import the missing
+        # module). The whole point of proxy mode is to keep state
+        # local, so verifying the dicts are isolated is enough.
+        self.assertNotIn("ONLY_ON_A", b.__dict__)
+        self.assertIn("ONLY_ON_A", a.__dict__)
+        # ``a`` still has its value.
+        self.assertEqual(a.ONLY_ON_A, 1)
+
+    def test_internal_lazy_slots_unaffected_by_mode(self):
+        # The ``_lazy_*`` slot writes always go through
+        # ``object.__setattr__`` regardless of the mode flag.
+        for mode in ("module", "proxy"):
+            with self.subTest(mode=mode):
+                lazyimports.core.SETATTR_TARGET = mode
+                proxy = lazy_import("os")
+                # Touching internal slots must work in both modes.
+                self.assertEqual(proxy._target(), "os")
+                self.assertIsNone(proxy._lazy_real)
+                self.assertIsNone(proxy._lazy_error)
+
+
+# License MIT <aiwonderland> in <2026>
+class TestImportErrorCaching(unittest.TestCase):
+    """``ImportError`` on first resolve must be cached.
+
+    Missing optional dependencies should not be retried on every
+    attribute access — that would defeat the whole purpose of the
+    backport for conditional dependencies.
+    """
+
+    def test_missing_module_caches_error(self):
+        sentinel = "_lazyimports_cache_err_does_not_exist_xyz"
+        proxy = lazy_import(sentinel)
+        # First access fails and caches the exception.
+        with self.assertRaises(ImportError):
+            proxy.any_attr  # noqa: B018
+        cached = proxy._lazy_error
+        self.assertIsNotNone(cached)
+        self.assertIsInstance(cached, ImportError)
+        # The real module must still be unset.
+        self.assertIsNone(proxy._lazy_real)
+        # Subsequent accesses re-raise the SAME cached exception
+        # object (proves we did not retry the import).
+        with self.assertRaises(ImportError) as ctx:
+            proxy.other_attr  # noqa: B018
+        self.assertIs(ctx.exception, cached)
+
+    def test_force_load_after_failure_still_raises(self):
+        # ``force_load`` must not magically succeed when the module
+        # really does not exist; it just re-raises the cached error.
+        sentinel = "_lazyimports_force_load_after_err_xyz"
+        proxy = lazy_import(sentinel)
+        with self.assertRaises(ImportError):
+            _ = proxy.any_attr  # noqa: B018
+        with self.assertRaises(ImportError):
+            force_load(proxy)
+
+    def test_repr_after_failure_includes_error(self):
+        sentinel = "_lazyimports_repr_after_err_xyz"
+        proxy = lazy_import(sentinel)
+        with self.assertRaises(ImportError):
+            proxy.any_attr  # noqa: B018
+        text = repr(proxy)
+        # The failure must be visible in the repr so debugging is easy.
+        self.assertIn("[failed", text)
+        self.assertIn(sentinel, text)
+
+
+# License MIT <aiwonderland> in <2026>
+class TestMagicMethodsNoLoad(unittest.TestCase):
+    """Operator dunders must not trigger a lazy import.
+
+    Python looks up operator dunders (``__eq__``, ``__hash__``, ...)
+    on the *type*, not on the instance, so they never reach
+    ``__getattr__`` and never trigger an import. These tests pin
+    that contract down.
+    """
+
+    def test_eq_uses_target_name(self):
+        a = lazy_import("os")
+        b = lazy_import("os")
+        c = lazy_import("sys")
+        # Equality must be true even before any module is loaded.
+        self.assertEqual(a, b)
+        self.assertNotEqual(a, c)
+        # And no import should have been triggered by the comparison.
+        self.assertIsNone(a._lazy_real)
+        self.assertIsNone(b._lazy_real)
+        self.assertIsNone(c._lazy_real)
+
+    def test_ne_uses_target_name(self):
+        a = lazy_import("os")
+        b = lazy_import("sys")
+        self.assertTrue(a != b)
+        # ``a != b`` short-circuits on equality, so still no import.
+        self.assertIsNone(a._lazy_real)
+        self.assertIsNone(b._lazy_real)
+
+    def test_eq_with_non_lazy_returns_not_equal(self):
+        # A proxy is never equal to an arbitrary non-proxy object.
+        proxy = lazy_import("os")
+        self.assertNotEqual(proxy, 42)
+        self.assertNotEqual(proxy, "os")
+        self.assertNotEqual(proxy, None)
+        self.assertIsNone(proxy._lazy_real)
+
+    def test_hash_consistent_with_eq(self):
+        # ``hash(a) == hash(b)`` whenever ``a == b``. This is the
+        # invariant Python requires of any object that defines
+        # ``__eq__``.
+        a = lazy_import("os.path")
+        b = lazy_import("os.path")
+        self.assertEqual(a, b)
+        self.assertEqual(hash(a), hash(b))
+
+    def test_bool_is_true_without_loading(self):
+        proxy = lazy_import("os")
+        self.assertIs(bool(proxy), True)
+        self.assertIsNone(proxy._lazy_real)
+
+
+# License MIT <aiwonderland> in <2026>
+class TestEnhancedDir(unittest.TestCase):
+    """``__dir__`` should surface ``__all__`` when the target is
+    already in ``sys.modules``."""
+
+    def test_dir_merges_all_when_already_loaded(self):
+        # ``os`` is imported very early by Python itself, so it is
+        # almost always in ``sys.modules``. The proxy's dir() should
+        # merge those exported names.
+        proxy = lazy_import("os")
+        names = dir(proxy)
+        self.assertIn("sep", names)
+        self.assertIn("path", names)
+        self.assertIn("__class__", names)
+
+    def test_dir_static_fallback_when_not_loaded(self):
+        # Use a sentinel that is definitely not in sys.modules.
+        sentinel = "_lazyimports_dir_sentinel_xyz"
+        # Make absolutely sure it is not loaded.
+        sys.modules.pop(sentinel, None)
+        proxy = lazy_import(sentinel)
+        names = dir(proxy)
+        # Static baseline still contains the slot names.
+        self.assertIsInstance(names, list)
+        self.assertIn("__class__", names)
+        # And must not have triggered an import.
+        self.assertIsNone(proxy._lazy_real)
+        self.assertIsNone(proxy._lazy_error)
+
+
+# License MIT <aiwonderland> in <2026>
+class TestSetattrTargetExported(unittest.TestCase):
+    """The ``SETATTR_TARGET`` constant must be reachable from the
+    package top level so users can read it.
+
+    Note on configuration
+    ---------------------
+    Python's import semantics mean that ``lazyimports.SETATTR_TARGET``
+    is a **re-exported binding**: it captures the string value at
+    package import time. To change the mode at runtime, write to
+    ``lazyimports.core.SETATTR_TARGET`` (the canonical location);
+    the ``LazyModule.__setattr__`` implementation reads from there
+    every time it is invoked.
+    """
+
+    def test_exported_in_package_all(self):
+        self.assertIn("SETATTR_TARGET", lazyimports.__all__)
+
+    def test_exported_attribute_matches_core(self):
+        # The re-exported value equals the live core value at import
+        # time. (Strings are immutable, so identity equality is fine.)
+        self.assertEqual(lazyimports.SETATTR_TARGET, core.SETATTR_TARGET)
+
+    def test_configuration_via_core_round_trips(self):
+        # Writing through ``lazyimports.core.SETATTR_TARGET`` is the
+        # supported configuration path and must take effect
+        # immediately for any new ``__setattr__`` call.
+        original = core.SETATTR_TARGET
+        try:
+            core.SETATTR_TARGET = "proxy"
+            proxy = lazy_import("os")
+            # The proxy's ``__setattr__`` must observe the new mode.
+            # We probe by setting an internal-only attribute via the
+            # default code path: in proxy mode the underlying module
+            # is NOT loaded as a side effect.
+            proxy.SCRATCH = 1
+            # The write went to the shell, not to ``os`` itself, so
+            # ``os`` must not have been touched (and therefore not
+            # loaded by us through the test scenario).
+            self.assertNotIn("SCRATCH", os.__dict__)
+            core.SETATTR_TARGET = "module"
+        finally:
+            core.SETATTR_TARGET = original
+        # Sanity: default mode behaviour is restored.
+        proxy2 = lazy_import("math")
+        try:
+            proxy2.SCRATCH2 = 2
+            self.assertTrue(hasattr(math, "SCRATCH2"))
+        finally:
+            if hasattr(math, "SCRATCH2"):
+                delattr(math, "SCRATCH2")
 
 
 if __name__ == "__main__":
