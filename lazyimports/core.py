@@ -49,7 +49,7 @@ SUPPORT_LAZY_IMPORT = True
 
 # License MIT <aiwonderland> in <2026>
 
-# WARNING: When LAZY_SETATTR_TARGET = "proxy", attributes stored on the proxy
+# WARNING: When SETATTR_TARGET = "proxy", attributes stored on the proxy
 # shadow identically named attributes from the real module once loaded.
 # Use "proxy" only for temporary proxy-local metadata.
 SETATTR_TARGET = "module"

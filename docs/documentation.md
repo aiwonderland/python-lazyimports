@@ -208,7 +208,7 @@ You should rarely need to instantiate `LazyModule` directly — use
 | `SUPPORT_LAZY_IMPORT` | `bool` | Always `True` — this package provides its own implementation. |
 | `SETATTR_TARGET` | `Literal["module", "proxy"]` | Controls where ``LazyModule.__setattr__`` writes non-internal attributes when the real module has not yet been loaded (or when loading has failed). |
 
-> [!WARNING] When `LAZY_SETATTR_TARGET = "proxy"`, attributes assigned directly to the proxy will 
+> [!WARNING] When `SETATTR_TARGET = "proxy"`, attributes assigned directly to the proxy will 
 > shadow attributes from the underlying module after the module is loaded. Use `"proxy"` only 
 > when attaching transient metadata to proxies; prefer `"module"` for regular application code to 
 > avoid subtle naming-shadowing bugs.
