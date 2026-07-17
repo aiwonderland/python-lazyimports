@@ -73,16 +73,7 @@ real = force_load(proxy)           # resolve now and return the real module
 
 ## API
 
-| Symbol | Description |
-| --- | --- |
-| `lazy_import(name, package=None)` | Return a lazy proxy for module `name`. |
-| `lazy_from(module, *names)` | Lazily import specific names from a module. |
-| `is_lazy(obj)` | Return `True` if `obj` is a `LazyModule`. |
-| `force_load(obj)` | Force resolution of a `LazyModule`; pass-through for anything else. |
-| `lazy()` | Context manager for grouping lazy imports (no-op marker). |
-| `LazyModule` | The proxy class returned by `lazy_import()`. |
-| `NATIVE_LAZY_IMPORT` | `True` when running on Python 3.15+. |
-| `SUPPORT_LAZY_IMPORT` | `True` on every version (this package provides its own implementation). |
+See the [main documentation](docs/documentation.md)
 
 ## Python 3.15+ native syntax
 
