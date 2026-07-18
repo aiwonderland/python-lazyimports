@@ -40,8 +40,12 @@ from lazyimports.core import (
     is_lazy,
     force_load,
     lazy,
+    _check_SETATTR_TARGET_value
 )
 
+
+_check_SETATTR_TARGET_value()
+del _check_SETATTR_TARGET_value
 
 # License MIT <aiwonderland> in <2026> 
 __version__ = "0.1.5"

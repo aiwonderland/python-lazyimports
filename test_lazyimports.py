@@ -27,6 +27,7 @@ from lazyimports.core import (
     SUPPORT_LAZY_IMPORT,
     SETATTR_TARGET,
     LazyModule,
+    _check_SETATTR_TARGET_value,
     force_load,
     is_lazy,
     lazy,
@@ -624,6 +625,152 @@ class TestSetattrTargetExported(unittest.TestCase):
         finally:
             if hasattr(math, "SCRATCH2"):
                 delattr(math, "SCRATCH2")
+
+
+# License MIT <aiwonderland> in <2026>
+class TestCheckSetattrTargetValue(unittest.TestCase):
+    """Tests for ``_check_SETATTR_TARGET_value``.
+
+    The validator is the single source of truth for what counts as a
+    legal ``SETATTR_TARGET`` value. It must:
+
+      * return the validated value (acting as a normaliser);
+      * accept both ``"module"`` and ``"proxy"``;
+      * reject unknown strings with ``ValueError``;
+      * reject non-string arguments with ``TypeError``;
+      * treat ``value=None`` as a request to re-check the current
+        module-level ``SETATTR_TARGET``.
+    """
+
+    def setUp(self):
+        # Save and restore the global so an exception-raising test
+        # does not leave the package in a broken state for the
+        # tests that follow.
+        self._previous_mode = core.SETATTR_TARGET
+
+    def tearDown(self):
+        core.SETATTR_TARGET = self._previous_mode
+        if core.SETATTR_TARGET not in ("module", "proxy"):
+            core.SETATTR_TARGET = "module"
+
+    # ------------------------------------------------------------------
+    # Happy path
+    # ------------------------------------------------------------------
+    def test_default_module_value_passes(self):
+        # The shipped default must validate without raising. We
+        # call without an argument so the function checks the
+        # current ``SETATTR_TARGET``.
+        result = _check_SETATTR_TARGET_value()
+        self.assertEqual(result, SETATTR_TARGET)
+        self.assertEqual(result, "module")
+
+    def test_explicit_module_string(self):
+        result = _check_SETATTR_TARGET_value("module")
+        self.assertEqual(result, "module")
+
+    def test_explicit_proxy_string(self):
+        result = _check_SETATTR_TARGET_value("proxy")
+        self.assertEqual(result, "proxy")
+
+    def test_none_argument_validates_current_value(self):
+        # ``None`` is documented as ``"check the current value"``,
+        # not as "missing argument". This is a behaviour the tests
+        # lock down so a future refactor cannot quietly change it.
+        core.SETATTR_TARGET = "proxy"
+        result = _check_SETATTR_TARGET_value(None)
+        self.assertEqual(result, "proxy")
+        core.SETATTR_TARGET = "module"
+        result = _check_SETATTR_TARGET_value(None)
+        self.assertEqual(result, "module")
+
+    def test_returns_valid_value_for_use_as_normaliser(self):
+        # The return value must equal the input when it is valid,
+        # which lets callers use the function as a one-stop
+        # ``str -> Literal[...]`` converter.
+        self.assertEqual(_check_SETATTR_TARGET_value("module"), "module")
+        self.assertEqual(_check_SETATTR_TARGET_value("proxy"), "proxy")
+
+    # ------------------------------------------------------------------
+    # Value errors
+    # ------------------------------------------------------------------
+    def test_unknown_string_raises_value_error(self):
+        for bad in ("MODULE", "Module", "Module ", "", "modules", "prxy"):
+            with self.subTest(value=bad):
+                with self.assertRaises(ValueError):
+                    _check_SETATTR_TARGET_value(bad)
+
+    def test_value_error_message_lists_accepted_values(self):
+        # The message is part of the API surface: callers (and
+        # automated tooling) rely on it being informative without
+        # having to consult the source.
+        try:
+            _check_SETATTR_TARGET_value("nope")
+        except ValueError as exc:
+            message = str(exc)
+        else:
+            self.fail("ValueError not raised")
+        # Both accepted values must appear in the message.
+        self.assertIn("'module'", message)
+        self.assertIn("'proxy'", message)
+        # And the offending value must be echoed back so the
+        # user can see what they sent.
+        self.assertIn("'nope'", message)
+
+    def test_value_error_with_none_checks_current(self):
+        # If the *current* ``SETATTR_TARGET`` has been corrupted
+        # before the test runs, the validator must still catch it.
+        core.SETATTR_TARGET = "garbage"
+        with self.assertRaises(ValueError):
+            _check_SETATTR_TARGET_value(None)
+
+    # ------------------------------------------------------------------
+    # Type errors
+    # ------------------------------------------------------------------
+    def test_non_string_raises_type_error(self):
+        for bad in (0, 1, 1.5, True, None, [], {}, (), b"module", object()):
+            with self.subTest(value=bad, type=type(bad).__name__):
+                # ``None`` is special-cased (means "check current
+                # value") and should NOT raise ``TypeError``. Skip
+                # it explicitly here.
+                if bad is None:
+                    continue
+                with self.assertRaises(TypeError):
+                    _check_SETATTR_TARGET_value(bad)
+
+    def test_type_error_message_mentions_str(self):
+        try:
+            _check_SETATTR_TARGET_value(42)
+        except TypeError as exc:
+            message = str(exc)
+        else:
+            self.fail("TypeError not raised")
+        # The error must point at ``str`` as the expected type so
+        # users immediately know what to pass instead.
+        self.assertIn("str", message)
+
+    def test_subclass_of_str_is_accepted(self):
+        # ``str`` subclasses are valid: this is standard Python
+        # duck-typing and avoids surprising users who build their
+        # own string-like types.
+        class MyStr(str):
+            pass
+        self.assertEqual(_check_SETATTR_TARGET_value(MyStr("module")), "module")
+        self.assertEqual(_check_SETATTR_TARGET_value(MyStr("proxy")), "proxy")
+
+    # ------------------------------------------------------------------
+    # Integration with the package import-time check
+    # ------------------------------------------------------------------
+    def test_package_loaded_successfully(self):
+        # ``__init__.py`` calls ``_check_SETATTR_TARGET_value()``
+        # once at import time. The mere fact that we have reached
+        # this test class proves the call succeeded; if the
+        # default value were invalid the import would have raised
+        # before any test could run.
+        #
+        # We additionally assert the global is still in a valid
+        # state after all the previous tests have potentially
+        # poked at it.
+        _check_SETATTR_TARGET_value()  # must not raise
 
 
 if __name__ == "__main__":

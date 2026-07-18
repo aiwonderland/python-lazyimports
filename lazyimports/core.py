@@ -77,6 +77,81 @@ not usually mixed in the same project; a single global keeps the
 API surface small. Change at your own risk and reset it before any
 code that expects the default behaviour runs."""
 
+# The set of legal values for ``SETATTR_TARGET``. Exposed as a
+# module-level constant so users can introspect the contract without
+# having to call the validator first. Treated as a tuple (immutable)
+# so accidental mutation cannot widen the accepted set.
+_VALID_SETATTR_TARGETS = ("module", "proxy")
+
+# License MIT <aiwonderland> in <2026>
+def _check_SETATTR_TARGET_value(value=None):
+    """Validate that ``value`` (or the current ``SETATTR_TARGET``)
+    is one of the accepted modes for ``LazyModule.__setattr__``.
+
+    This helper is the single source of truth for what counts as a
+    legal ``SETATTR_TARGET`` value. It is invoked in two places:
+
+    1. At import time, via the explicit ``_SETATTR_TARGET_VALIDATED``
+       flag below, so a corrupted or mutated global is caught as
+       early as possible.
+    2. By :func:`set_SETATTR_TARGET`, the supported runtime entry
+       point for changing the mode.
+
+    Parameters
+    ----------
+    value : str or None, optional
+        The value to validate. If ``None`` (the default), the
+        module-level ``SETATTR_TARGET`` constant itself is checked.
+
+    Returns
+    -------
+    str
+        The validated value, always one of ``"module"`` or
+        ``"proxy"``. Returning the value (instead of just raising on
+        failure) lets callers use this function as a normaliser.
+
+    Raises
+    ------
+    TypeError
+        If ``value`` is provided and is not a ``str``. The mode
+        names are string literals; any other type is unambiguously
+        a programming error.
+    ValueError
+        If ``value`` is a string but not in
+        ``_VALID_SETATTR_TARGETS``. The message lists every
+        accepted value and echoes back what was received, which is
+        enough information to fix the mistake without consulting
+        the source.
+    """
+    if value is None:
+        value = SETATTR_TARGET
+    if not isinstance(value, str):
+        # Type errors are reported separately from value errors so
+        # callers (and ``set_SETATTR_TARGET``) can decide which
+        # exception to surface to the end user.
+        raise TypeError(
+            "SETATTR_TARGET must be a str, got {!r} of type {}".format(
+                value, type(value).__name__,
+            )
+        )
+    if value not in _VALID_SETATTR_TARGETS:
+        accepted = ", ".join(
+            "{!r}".format(v) for v in _VALID_SETATTR_TARGETS
+        )
+        raise ValueError(
+            "SETATTR_TARGET must be one of: {}; got {!r}".format(
+                accepted, value,
+            )
+        )
+    return value
+
+# Run the validator once at import time so a broken module-level
+# value fails fast (at ``import lazyimports``) instead of silently
+# later. The result is intentionally discarded; we only care about
+# the side effect of raising on invalid input.
+_SETATTR_TARGET_VALIDATED = _check_SETATTR_TARGET_value()
+del _SETATTR_TARGET_VALIDATED
+
 # GNUv3 License, add in <2018>, by <Evan Yang>
 class LazyModule(types.ModuleType):
     """Proxy module that defers the real import until attribute access.
