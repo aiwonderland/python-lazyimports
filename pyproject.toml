@@ -11,7 +11,7 @@ requires-python = ">=3.6"
 license = "MIT"
 
 [project.urls]
-Repository = "https://github.com/aiwonderland/python-lazyimports"
+Repository = "https://github.com/pythonbackport/python-lazyimports"
 
 [tool.hatch.build.targets.wheel]
 packages = ["lazyimports"]
